@@ -1,0 +1,19 @@
+data_configs:
+  data_path: '/mnt/SSD6/nathan/snow/data/'
+  norm_by_image: True
+  sample_shape: 64
+
+  # if set to 1, it will not use multiprocessing
+  dataset_workers: 1 # currently no using multiprocessing since it creates a bottleneck
+  from_tensor: False
+  # This is a temporary resize to 299x299 since I don't have time to mess with Inception-v4's architecture
+  temp_resize: True
+  # for developing with less than the full dataset to save time
+  num_images: 100
+
+training_configs:
+  batch_size: 5
+  num_workers: 2
+# sets kernel sizes to range over 2^i, i=[0,dilation_range)
+# same as the number of levels in the dialation pyrimand
+dilation_range: 4
