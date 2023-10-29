@@ -4,6 +4,34 @@ import torch
 import torch.nn as nn
 
 
+class DilationPyramid(nn.Module):
+    def __init__(self, dilation_pyramid_configs):
+        super(DilationPyramid, self).__init__()
+        # in_channels = dilation_pyrimand_configs["in_channels"]
+        # out_channels = dilation_pyrimand_configs["out_channels"]
+        # kernel_size = dilation_pyrimand_configs["kernel_size"]
+        # stride = dilation_pyrimand_configs["stride"]
+        # padding = dilation_pyrimand_configs["padding"]
+        # bias = dilation_pyrimand_configs["bias"]
+        # layers = nn.ModuleList([nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=bias)])
+
+        levels = dilation_pyramid_configs["levels"]
+        conv_configs = dilation_pyramid_configs["conv_configs"]
+        self.layers = nn.ModuleList(
+            [
+                nn.Conv2d(
+                    **conv_configs,
+                    padding=(2**i) * ((conv_configs["kernel_size"] - 1) // 2),
+                    dilation=2**i
+                )
+                for i in range(levels + 1)
+            ]
+        )
+
+    def forward(self, x):
+        return torch.cat([layer(x) for layer in self.layers], dim=1)
+
+
 class Conv2d(nn.Module):
     def __init__(
         self, in_channels, out_channels, kernel_size, padding, stride=1, bias=True
@@ -243,8 +271,8 @@ class Inceptionv4(nn.Module):
         for i in range(3):
             blocks.append(Inception_C(1536))
         self.features = nn.Sequential(*blocks)
-        self.global_average_pooling = nn.AdaptiveAvgPool2d((1, 1))
-        self.linear = nn.Linear(1536, classes)
+        # self.global_average_pooling = nn.AdaptiveAvgPool2d((1, 1))
+        # self.linear = nn.Linear(1536, classes)
 
     def forward(self, x):
         x = self.features(x)
@@ -252,3 +280,33 @@ class Inceptionv4(nn.Module):
         # x = x.view(x.size(0), -1)
         # x = self.linear(x)
         return x
+
+    def get_output_dims(self):
+        x = self.forward(
+            torch.zeros(
+                1, 3, self.data_configs["input_size"], self.data_configs["input_size"]
+            )
+        )
+        return x.shape
+
+
+class Descriptor(nn.Module):
+    def __init__(self, dilation_pyramid_configs, data_configs):
+        super(Descriptor, self).__init__()
+        self.inceptionv4 = Inceptionv4()
+        dilation_pyramid_configs["in_channels"] = self.inceptionv4.get_output_dims()[1]
+        self.pyramid = DilationPyramid(dilation_pyramid_configs)
+        self.data_configs = data_configs
+
+    def forward(self, x):
+        x = self.inceptionv4(x)
+        x = self.pyramid(x)
+        return x
+
+    def get_output_dims(self):
+        x = self.forward(
+            torch.zeros(
+                1, 3, self.data_configs["input_size"], self.data_configs["input_size"]
+            )
+        )
+        return x.shape

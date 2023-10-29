@@ -7,6 +7,6 @@ def open_configs():
 
     data_configs = configs["data_configs"]
     training_configs = configs["training_configs"]
-    dilation_range = configs["dilation_range"]
+    model_configs = configs["model_configs"]
 
-    return data_configs, training_configs, dilation_range
+    return data_configs, training_configs, model_configs

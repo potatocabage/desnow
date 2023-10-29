@@ -1,5 +1,5 @@
 data_configs:
-  data_path: '/mnt/SSD6/nathan/snow/data/'
+  data_path: '/mnt/SSD6/nathan/desnow/data/'
   norm_by_image: True
   sample_shape: 64
 
@@ -16,4 +16,35 @@ training_configs:
   num_workers: 2
 # sets kernel sizes to range over 2^i, i=[0,dilation_range)
 # same as the number of levels in the dialation pyrimand
-dilation_range: 4
+
+model_configs:
+  dilation_pyramid_configs:
+
+    # make sure this is such that the output dimensions don't change
+    conv_configs:
+      out_channels: 1536
+      # padding only accomodates odd kernel size
+      kernel_size: 3
+      stride: 1
+      bias: False
+    # gamma in the paper
+    levels: 3
+
+  trans_recovery_configs:
+    snow_mask_configs:
+      conv_configs:
+        stride: 1
+        bias: False
+      kernel_levels: 4
+    abberation_configs:
+      conv_configs:
+        stride: 1
+        bias: False
+      kernel_levels: 4
+    decoder_configs:
+      conv_configs:
+        stride: 2
+        kernel_size: 5
+
+  # beta in the paper
+  rg_dilation_levels: 4

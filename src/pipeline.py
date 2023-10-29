@@ -5,7 +5,7 @@ from time import time
 
 
 def pipeline():
-    data_configs, training_configs, dilation_range = open_configs()
+    data_configs, training_configs, model_configs = open_configs()
 
     training_datasets = load_data(data_configs)
 
