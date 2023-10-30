@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from descriptors import Descriptor
+from time import time
 
 
 class EffConv2d(nn.Module):
@@ -12,8 +13,8 @@ class EffConv2d(nn.Module):
             self.conv = nn.Sequential(
                 nn.Conv2d(
                     in_channels,
-                    out_channels,
-                    (1, kernel_size),
+                    in_channels,
+                    kernel_size=(1, kernel_size),
                     stride=stride,
                     padding=(0, padding),
                     bias=bias,
@@ -21,7 +22,7 @@ class EffConv2d(nn.Module):
                 nn.Conv2d(
                     in_channels,
                     out_channels,
-                    (kernel_size, 1),
+                    kernel_size=(kernel_size, 1),
                     stride=stride,
                     padding=(padding, 0),
                     bias=bias,
@@ -44,7 +45,7 @@ class EffConv2d(nn.Module):
 
 class DeConv2d(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel_size, padding, stride=1, bias=True
+        self, in_channels, out_channels, kernel_size, padding=0, stride=1, bias=True
     ):
         super(DeConv2d, self).__init__()
         self.conv = nn.ConvTranspose2d(
@@ -75,17 +76,20 @@ class PyramidMaxout(nn.Module):
                 EffConv2d(
                     **conv_configs,
                     out_channels=out_channels,
-                    kernel_size=2 * i - 1,
-                    padding=i - 1
+                    kernel_size=2 * (i + 1) - 1,
+                    padding=i
                 )
-                for i in kernel_levels
+                for i in range(kernel_levels)
             ]
         )
+        print("pyramid layers", self.layers)
 
     def forward(self, x):
-        x = torch.cat([torch.unsqueeze(layer(x), 0) for layer in self.layers], dim=0)
-        x = torch.max(x, dim=0)
-        return x[0]
+        print("pyramid input", x.shape)
+        out = torch.cat([torch.unsqueeze(layer(x), 0) for layer in self.layers], dim=0)
+        out = torch.max(out, dim=0)
+        print("pyramid output", out[0].shape)
+        return out[0]
 
 
 class Decoder(nn.Module):
@@ -99,13 +103,24 @@ class Decoder(nn.Module):
         # this is the number of layers of kernel size 2 that will be used to match output size
         filler_layer_counter = 0
 
-        while input_size <= output_size - (
-            conv_configs["kernel_size"] - 1 - conv_configs["stride"]
+        print("decoder input size", input_size)
+        print(
+            "lim",
+            (output_size + conv_configs["stride"] - conv_configs["kernel_size"])
+            // conv_configs["stride"],
+        )
+        while (
+            input_size
+            <= (output_size + conv_configs["stride"] - conv_configs["kernel_size"])
+            // conv_configs["stride"]
         ):
-            input_size = (conv_configs["kernel_size"] - 1) + (
-                input_size - 1
-            ) * conv_configs["stride"]
+            input_size = (
+                (conv_configs["kernel_size"] - 1)
+                + (input_size - 1) * conv_configs["stride"]
+                + 1
+            )
             layer_counter += 1
+            print("input_size", input_size, layer_counter)
 
         while input_size < output_size:
             filler_layer_counter += 1
@@ -113,8 +128,17 @@ class Decoder(nn.Module):
 
         self.layers = nn.ModuleList(
             [DeConv2d(**conv_configs) for _ in range(layer_counter)]
-            + [DeConv2d(kernel_size=2, stride=1) for _ in range(filler_layer_counter)]
+            + [
+                DeConv2d(
+                    in_channels=conv_configs["in_channels"],
+                    out_channels=conv_configs["out_channels"],
+                    kernel_size=2,
+                    stride=1,
+                )
+                for _ in range(filler_layer_counter)
+            ]
         )
+        print("decoder layers", self.layers)
 
     def forward(self, x):
         for layer in self.layers:
@@ -161,7 +185,11 @@ class Rt(nn.Module):
         self.ae = AE(abberation_configs)
 
     def forward(self, ft, x):
+        start = time()
         ft = self.decoder(ft)
+        end = time()
+        print("decoder time", end - start)
+        print(ft.shape)
         z = self.se(ft)
         a = self.ae(ft)
         z_mask = torch.where(z >= 1, 0, z)
@@ -183,8 +211,18 @@ class TranRecovery(nn.Module):
 
         ft_shape = self.Dt.get_output_dims()
         print("ft_shape", ft_shape)
-        trans_recovery_configs["decoder_configs"]["in_channels"] = ft_shape[1]
-        trans_recovery_configs["decoder_configs"]["out_channels"] = ft_shape[1]
+        trans_recovery_configs["decoder_configs"]["conv_configs"][
+            "in_channels"
+        ] = ft_shape[1]
+        trans_recovery_configs["decoder_configs"]["conv_configs"][
+            "out_channels"
+        ] = ft_shape[1]
+        trans_recovery_configs["snow_mask_configs"]["conv_configs"][
+            "in_channels"
+        ] = ft_shape[1]
+        trans_recovery_configs["abberation_configs"]["conv_configs"][
+            "in_channels"
+        ] = ft_shape[1]
         trans_recovery_configs["decoder_configs"]["input_size"] = ft_shape[2]
         trans_recovery_configs["decoder_configs"]["output_size"] = data_configs[
             "sample_shape"
@@ -193,6 +231,12 @@ class TranRecovery(nn.Module):
         self.Rt = Rt(trans_recovery_configs)
 
     def forward(self, x):
+        start = time()
         ft = self.Dt(x)
+        end = time()
+        print("Descriptor time", end - start)
+        start = time()
         y, fc = self.Rt(ft, x)
+        end = time()
+        print("Rt time", end - start)
         return y, fc

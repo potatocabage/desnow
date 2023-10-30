@@ -35,12 +35,31 @@ model_configs:
       conv_configs:
         stride: 1
         bias: False
+      # beta in the paper
       kernel_levels: 4
+      
     abberation_configs:
       conv_configs:
         stride: 1
         bias: False
+      # beta in the paper
       kernel_levels: 4
+
+    need_decoder: True
+    decoder_configs:
+      conv_configs:
+        stride: 2
+        kernel_size: 5
+
+  res_gen_configs:
+    pyramid_sum_configs:
+      conv_configs:
+        stride: 1
+        bias: False
+      # beta in the paper
+      kernel_levels: 4
+
+    need_decoder: True
     decoder_configs:
       conv_configs:
         stride: 2

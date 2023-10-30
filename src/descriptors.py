@@ -281,10 +281,10 @@ class Inceptionv4(nn.Module):
         # x = self.linear(x)
         return x
 
-    def get_output_dims(self):
+    def get_output_dims(self, data_configs):
         x = self.forward(
             torch.zeros(
-                1, 3, self.data_configs["input_size"], self.data_configs["input_size"]
+                1, 3, data_configs["sample_shape"], data_configs["sample_shape"]
             )
         )
         return x.shape
@@ -294,7 +294,10 @@ class Descriptor(nn.Module):
     def __init__(self, dilation_pyramid_configs, data_configs):
         super(Descriptor, self).__init__()
         self.inceptionv4 = Inceptionv4()
-        dilation_pyramid_configs["in_channels"] = self.inceptionv4.get_output_dims()[1]
+        dilation_pyramid_configs["conv_configs"][
+            "in_channels"
+        ] = self.inceptionv4.get_output_dims(data_configs)[1]
+
         self.pyramid = DilationPyramid(dilation_pyramid_configs)
         self.data_configs = data_configs
 
@@ -306,7 +309,10 @@ class Descriptor(nn.Module):
     def get_output_dims(self):
         x = self.forward(
             torch.zeros(
-                1, 3, self.data_configs["input_size"], self.data_configs["input_size"]
+                1,
+                3,
+                self.data_configs["sample_shape"],
+                self.data_configs["sample_shape"],
             )
         )
         return x.shape
