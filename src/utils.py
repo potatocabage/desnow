@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import numpy as np
+import random
 from configs import open_configs
 
 
@@ -12,3 +14,10 @@ from configs import open_configs
 #         cat_features = torch.cat((cat_features, conv(features)), 1)
 
 #     return cat_features
+
+def set_seeds(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)

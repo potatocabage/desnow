@@ -1,0 +1,68 @@
+Traceback (most recent call last):
+  File "/mnt/SSD6/nathan/desnow/src/pipeline.py", line 2, in <module>
+    from load_data import load_data
+  File "/mnt/SSD6/nathan/desnow/src/load_data.py", line 4, in <module>
+    from dataset import *
+  File "/mnt/SSD6/nathan/desnow/src/dataset.py", line 6, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+50000
+Loading 100 took 2.613168716430664 seconds
+16801
+Loading 100 took 2.6345951557159424 seconds
+16588
+Loading 100 took 2.6291260719299316 seconds
+16611
+Loading 100 took 2.756232976913452 seconds
+start trainer
+S1_x shape:  torch.Size([1, 64, 64, 64])
+S1_x0 shape:  torch.Size([1, 64, 64, 64])
+S1_x1 shape:  torch.Size([1, 96, 64, 64])
+S2_x shape:  torch.Size([1, 192, 64, 64])
+S2_x0 shape:  torch.Size([1, 192, 64, 64])
+S2_x1 shape:  torch.Size([1, 192, 64, 64])
+RA_x0 shape:  torch.Size([1, 384, 64, 64])
+RA_x1 shape:  torch.Size([1, 256, 64, 64])
+RA_x2 shape:  torch.Size([1, 384, 64, 64])
+RB_x0 shape:  torch.Size([1, 192, 64, 64])
+RB_x1 shape:  torch.Size([1, 320, 64, 64])
+RB_x2 shape:  torch.Size([1, 1024, 64, 64])
+S1_x shape:  torch.Size([1, 64, 64, 64])
+S1_x0 shape:  torch.Size([1, 64, 64, 64])
+S1_x1 shape:  torch.Size([1, 96, 64, 64])
+S2_x shape:  torch.Size([1, 192, 64, 64])
+S2_x0 shape:  torch.Size([1, 192, 64, 64])
+S2_x1 shape:  torch.Size([1, 192, 64, 64])
+RA_x0 shape:  torch.Size([1, 384, 64, 64])
+RA_x1 shape:  torch.Size([1, 256, 64, 64])
+RA_x2 shape:  torch.Size([1, 384, 64, 64])
+RB_x0 shape:  torch.Size([1, 192, 64, 64])
+RB_x1 shape:  torch.Size([1, 320, 64, 64])
+RB_x2 shape:  torch.Size([1, 1024, 64, 64])
+ft_shape torch.Size([1, 6144, 64, 64])
+S1_x shape:  torch.Size([1, 64, 64, 64])
+S1_x0 shape:  torch.Size([1, 64, 64, 64])
+S1_x1 shape:  torch.Size([1, 96, 64, 64])
+S2_x shape:  torch.Size([1, 192, 64, 64])
+S2_x0 shape:  torch.Size([1, 192, 64, 64])
+S2_x1 shape:  torch.Size([1, 192, 64, 64])
+RA_x0 shape:  torch.Size([1, 384, 64, 64])
+RA_x1 shape:  torch.Size([1, 256, 64, 64])
+RA_x2 shape:  torch.Size([1, 384, 64, 64])
+RB_x0 shape:  torch.Size([1, 192, 64, 64])
+RB_x1 shape:  torch.Size([1, 320, 64, 64])
+RB_x2 shape:  torch.Size([1, 1024, 64, 64])
+S1_x shape:  torch.Size([1, 64, 64, 64])
+S1_x0 shape:  torch.Size([1, 64, 64, 64])
+S1_x1 shape:  torch.Size([1, 96, 64, 64])
+S2_x shape:  torch.Size([1, 192, 64, 64])
+S2_x0 shape:  torch.Size([1, 192, 64, 64])
+S2_x1 shape:  torch.Size([1, 192, 64, 64])
+RA_x0 shape:  torch.Size([1, 384, 64, 64])
+RA_x1 shape:  torch.Size([1, 256, 64, 64])
+RA_x2 shape:  torch.Size([1, 384, 64, 64])
+RB_x0 shape:  torch.Size([1, 192, 64, 64])
+RB_x1 shape:  torch.Size([1, 320, 64, 64])
+RB_x2 shape:  torch.Size([1, 1024, 64, 64])
+fr_shape torch.Size([1, 6144, 64, 64])
+begun training

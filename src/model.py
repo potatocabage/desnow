@@ -1,5 +1,6 @@
 from trans_recovery import *
 from res_gen import *
+import torch.nn as nn
 
 
 class Desnow(nn.Module):
@@ -24,7 +25,34 @@ class Desnow(nn.Module):
         )
 
     def forward(self, x):
-        y_snow_free, fc = self.trans_recovery(x)
+        # print('sample_shape', x.shape)
+        # print(type(x))
+        y_snow_free, fc, z_hat = self.trans_recovery(x)
         r = self.res_gen(fc)
-        y = y_snow_free + r
-        return y
+        y_hat = y_snow_free + r
+        return y_snow_free, y_hat, z_hat
+
+
+class CustomLoss(nn.Module):
+    def __init__(self, loss_configs):
+        super(CustomLoss, self).__init__()
+        self.loss_configs = loss_configs
+        self.pool_levels = loss_configs["pool_levels"]
+        self.z_lambda = loss_configs["z_lambda"]
+        self.layers = nn.ModuleList([nn.MaxPool2d(2**i, 2**i, padding=(2**i)//2) 
+                                     for i in range(self.pool_levels+1)])
+        # l2 regularization is done by weight_decay in optimizer
+
+    def calc_loss(self, gen, true):
+        loss = 0
+        for layer in self.layers:
+            loss += torch.norm(layer(true) - layer(gen))**2
+        return loss
+
+    def forward(self, y, z, y_snow_free, y_hat, z_hat):
+        y_snow_free_loss = self.calc_loss(y_snow_free, y)
+        y_hat_loss = self.calc_loss(y_hat, y)
+        z_hat_loss = self.calc_loss(z_hat, z)
+
+        return y_snow_free_loss + y_hat_loss + self.z_lambda*z_hat_loss       
+        

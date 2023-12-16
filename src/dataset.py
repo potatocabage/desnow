@@ -58,9 +58,9 @@ PIL_transform = transforms.Compose(
 
 # this dataset will norm the entire image at init time
 class ImageNormDataset(Dataset):
-    def __init__(self, syn_img_path, gt_img_path, data_shape):
+    def __init__(self, syn_img_path, gt_img_path, snow_mask_path, data_shape):
         syn_img = Image.open(syn_img_path)
-        self.syn_img = transforms.ToTensor()(syn_img)
+        self.syn_img = transforms.ToTensor()(syn_img).to(torch.float16)
         # self.syn_img = (self.syn_img - torch.min(self.syn_img)) * (
         #     1.0 / (torch.max(self.syn_img) - torch.min(self.syn_img))
         # )
@@ -77,7 +77,14 @@ class ImageNormDataset(Dataset):
         )
         self.gt_img = self.gt_img * 2.0 - 1.0
 
+        snow_mask = Image.open(snow_mask_path)
+        self.snow_mask = transforms.ToTensor()(snow_mask)
+        self.snow_mask = (self.snow_mask - torch.min(self.syn_img)) / (
+            torch.max(self.syn_img) - torch.min(self.syn_img)
+        )
+
         self.data_shape = data_shape
+        self.img_shape = self.syn_img.shape
 
     def __len__(self):
         return (self.syn_img.shape[1] - self.data_shape) * (
@@ -86,18 +93,34 @@ class ImageNormDataset(Dataset):
 
     def __getitem__(self, index):
         # each item is a 3x64x64 image by sliding a mask across the image
+        # print(index % self.data_shape, (index % self.data_shape) + self.data_shape)
+        # print(index // self.data_shape, (index // self.data_shape) + self.data_shape)
+        # index = index % ((self.img_shape[1] - self.data_shape) * (self.img_shape[2] - self.data_shape))
+        # print('image shape', self.img_shape)
+        # print('syn shape', self.syn_img.shape)
+        # print('data shape', self.data_shape)
+        # print(index)
+        # print(self.__len__())
+        # print(index // (self.img_shape[2]-self.data_shape), (index // (self.img_shape[2]-self.data_shape)) + self.data_shape)
+        # print(index % (self.img_shape[2]-self.data_shape), (index % (self.img_shape[2]-self.data_shape)) + self.data_shape)
+        
         return (
             self.syn_img[
                 :,
-                index % self.data_shape : (index % self.data_shape) + self.data_shape,
-                index // self.data_shape : (index // self.data_shape) + self.data_shape,
+                index // (self.img_shape[2]-self.data_shape) : (index // (self.img_shape[2]-self.data_shape)) + self.data_shape,
+                index % (self.img_shape[2]-self.data_shape) : (index % (self.img_shape[2]-self.data_shape)) + self.data_shape,
             ],
             self.gt_img[
                 :,
-                index % self.data_shape : (index % self.data_shape) + self.data_shape,
-                index // self.data_shape : (index // self.data_shape) + self.data_shape,
+                index // (self.img_shape[2]-self.data_shape) : (index // (self.img_shape[2]-self.data_shape)) + self.data_shape,
+                index % (self.img_shape[2]-self.data_shape) : (index % (self.img_shape[2]-self.data_shape)) + self.data_shape,
             ],
-        )
+            self.snow_mask[
+                :,
+                index // (self.img_shape[2]-self.data_shape) : (index // (self.img_shape[2]-self.data_shape)) + self.data_shape,
+                index % (self.img_shape[2]-self.data_shape) : (index % (self.img_shape[2]-self.data_shape)) + self.data_shape,
+            ],
+            )
 
 
 # # this dataset will norm each 64x64 patch of the image at get_item time
@@ -180,11 +203,13 @@ class ImageNormDataset(Dataset):
 
 # this dataset will norm each 64x64 patch of the image at get_item time
 class ItemNormDataset(Dataset):
-    def __init__(self, syn_img_path, gt_img_path, data_shape):
+    def __init__(self, syn_img_path, gt_img_path, snow_mask_path, data_shape):
         syn_img = Image.open(syn_img_path)
-        self.syn_img = transforms.ToTensor()(syn_img)
+        self.syn_img = transforms.ToTensor()(syn_img).to(torch.float16)
         gt_img = Image.open(gt_img_path)
-        self.gt_img = transforms.ToTensor()(gt_img)
+        self.gt_img = transforms.ToTensor()(gt_img).to(torch.float16)
+        snow_mask = Image.open(snow_mask_path)
+        self.snow_mask = transforms.ToTensor()(snow_mask)
         self.data_shape = data_shape
 
     def __len__(self):
@@ -197,13 +222,18 @@ class ItemNormDataset(Dataset):
 
         syn_item = self.syn_img[
             :,
-            index % self.data_shape : (index % self.data_shape) + self.data_shape,
-            index // self.data_shape : (index // self.data_shape) + self.data_shape,
+            index // (self.img_shape[2]-self.data_shape) : (index // (self.img_shape[2]-self.data_shape)) + self.data_shape,
+            index % (self.img_shape[2]-self.data_shape) : (index % (self.img_shape[2]-self.data_shape)) + self.data_shape,
         ]
         gt_item = self.gt_img[
             :,
-            index % self.data_shape : (index % self.data_shape) + self.data_shape,
-            index // self.data_shape : (index // self.data_shape) + self.data_shape,
+            index // (self.img_shape[2]-self.data_shape) : (index // (self.img_shape[2]-self.data_shape)) + self.data_shape,
+            index % (self.img_shape[2]-self.data_shape) : (index % (self.img_shape[2]-self.data_shape)) + self.data_shape,
+        ]
+        snow_mask_item = self.snow_mask[
+            :,
+            index // (self.img_shape[2]-self.data_shape) : (index // (self.img_shape[2]-self.data_shape)) + self.data_shape,
+            index % (self.img_shape[2]-self.data_shape) : (index % (self.img_shape[2]-self.data_shape)) + self.data_shape,
         ]
 
         syn_item = (syn_item - torch.min(syn_item)) / (
@@ -212,7 +242,45 @@ class ItemNormDataset(Dataset):
         gt_item = (gt_item - torch.min(gt_item)) / (
             torch.max(gt_item) - torch.min(gt_item)
         )
+        snow_mask_item = (snow_mask_item - torch.min(snow_mask_item)) / (
+            torch.max(snow_mask_item) - torch.min(snow_mask_item)
+        )
         syn_item = syn_item * 2.0 - 1.0
         gt_item = gt_item * 2.0 - 1.0
+        snow_mask_item = snow_mask_item * 2.0 - 1.0
 
-        return syn_item, gt_item
+        return syn_item, gt_item, snow_mask_item
+    
+class FullImageDataset(Dataset):
+    def __init__(self, syn_img_path, gt_img_path, snow_mask_path, sample_shape):
+        # sample shape is not used and only to keep API the same
+        syn_img = Image.open(syn_img_path)
+        self.syn_img = transforms.ToTensor()(syn_img).to(torch.float16)
+        gt_img = Image.open(gt_img_path)
+        self.gt_img = transforms.ToTensor()(gt_img).to(torch.float16)
+        snow_mask = Image.open(snow_mask_path)
+        self.snow_mask = transforms.ToTensor()(snow_mask)
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, index):
+        # each item is a 3x64x64 image by sliding a mask across the image
+
+        syn_item = self.syn_img
+        gt_item = self.gt_img
+
+        syn_item = (syn_item - torch.min(syn_item)) / (
+            torch.max(syn_item) - torch.min(syn_item)
+        )
+        gt_item = (gt_item - torch.min(gt_item)) / (
+            torch.max(gt_item) - torch.min(gt_item)
+        )
+        snow_mask_item = (snow_mask_item - torch.min(syn_item)) / (
+            torch.max(syn_item) - torch.min(syn_item)
+        )
+        syn_item = syn_item * 2.0 - 1.0
+        gt_item = gt_item * 2.0 - 1.0
+        snow_mask_item = snow_mask_item * 2.0 - 1.0
+
+        return syn_item, gt_item, snow_mask_item

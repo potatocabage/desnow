@@ -82,7 +82,7 @@ class PyramidMaxout(nn.Module):
                 for i in range(kernel_levels)
             ]
         )
-        print("pyramid layers", self.layers)
+        # print("pyramid layers", self.layers)
 
     def forward(self, x):
         print("pyramid input", x.shape)
@@ -180,24 +180,29 @@ class Rt(nn.Module):
         snow_mask_configs = trans_recovery_configs["snow_mask_configs"]
         abberation_configs = trans_recovery_configs["abberation_configs"]
         decoder_configs = trans_recovery_configs["decoder_configs"]
-        self.decoder = Decoder(decoder_configs)
+        self.need_decoder = trans_recovery_configs["need_decoder"]
+        if self.need_decoder:
+            self.decoder = Decoder(decoder_configs)
         self.se = SE(snow_mask_configs)
         self.ae = AE(abberation_configs)
 
     def forward(self, ft, x):
-        start = time()
-        ft = self.decoder(ft)
-        end = time()
-        print("decoder time", end - start)
+        if self.need_decoder:
+            start = time()
+            ft = self.decoder(ft)
+            end = time()
+            print("decoder time", end - start)
         print(ft.shape)
         z = self.se(ft)
         a = self.ae(ft)
-        z_mask = torch.where(z >= 1, 0, z)
+        # print("z dtype", z.dtype)
+        z_mask = torch.where(z >= 1.0, torch.zeros(1, dtype=z.dtype, device=z.device), z)
+        # print("z_mask dtype", z_mask.dtype)
 
         y = (x - (a * z_mask)) / (1 - z_mask)
         fc = y * torch.norm(z) * a
 
-        return y, fc
+        return y, fc, z
 
 
 class TranRecovery(nn.Module):
@@ -211,22 +216,30 @@ class TranRecovery(nn.Module):
 
         ft_shape = self.Dt.get_output_dims()
         print("ft_shape", ft_shape)
-        trans_recovery_configs["decoder_configs"]["conv_configs"][
-            "in_channels"
-        ] = ft_shape[1]
-        trans_recovery_configs["decoder_configs"]["conv_configs"][
-            "out_channels"
-        ] = ft_shape[1]
+
+        if ft_shape[2] < data_configs["sample_shape"]:
+            trans_recovery_configs["need_decoder"] = True
+            print("TranRecovery needs decoder")
+            trans_recovery_configs["decoder_configs"]["conv_configs"][
+                "in_channels"
+            ] = ft_shape[1]
+            trans_recovery_configs["decoder_configs"]["conv_configs"][
+                "out_channels"
+            ] = ft_shape[1]
+            trans_recovery_configs["decoder_configs"]["input_size"] = ft_shape[2]
+            trans_recovery_configs["decoder_configs"]["output_size"] = data_configs[
+                "sample_shape"
+            ]
+        else:
+            trans_recovery_configs["need_decoder"] = False
+
         trans_recovery_configs["snow_mask_configs"]["conv_configs"][
             "in_channels"
         ] = ft_shape[1]
         trans_recovery_configs["abberation_configs"]["conv_configs"][
             "in_channels"
         ] = ft_shape[1]
-        trans_recovery_configs["decoder_configs"]["input_size"] = ft_shape[2]
-        trans_recovery_configs["decoder_configs"]["output_size"] = data_configs[
-            "sample_shape"
-        ]
+        
 
         self.Rt = Rt(trans_recovery_configs)
 
@@ -236,7 +249,7 @@ class TranRecovery(nn.Module):
         end = time()
         print("Descriptor time", end - start)
         start = time()
-        y, fc = self.Rt(ft, x)
+        y, fc, z = self.Rt(ft, x)
         end = time()
         print("Rt time", end - start)
-        return y, fc
+        return y, fc, z
